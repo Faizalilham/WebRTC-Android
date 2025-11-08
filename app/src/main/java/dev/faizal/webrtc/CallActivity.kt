@@ -1,7 +1,10 @@
 package dev.faizal.webrtc
 
+
+import android.Manifest
 import android.os.Bundle
 import android.widget.Toast
+import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.database.ChildEventListener
 import com.google.firebase.database.DataSnapshot
@@ -18,7 +21,7 @@ class CallActivity : AppCompatActivity() {
     private lateinit var binding : ActivityCallBinding
 
     private lateinit var database: DatabaseReference
-    private val currentUserId = "user2" // Ganti sesuai device/user
+    private val currentUserId = "faizal" // Ganti sesuai device/user
     private var currentCallId: String? = null
     private var isCallActive = false
 
@@ -35,7 +38,7 @@ class CallActivity : AppCompatActivity() {
 
 
         database = FirebaseDatabase.getInstance().reference
-        val manager = PanicCallManager(this, "user2", { /* connected */ }, { /* ended */ })
+        val manager = PanicCallManager(this, "faizal", { /* connected */ }, { /* ended */ })
         manager.initialize()
 
         listenForIncomingPanicCalls()

@@ -50,5 +50,9 @@ dependencies {
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core
 
+    // Firebase
+    implementation 'com.google.firebase:firebase-database:21.0.0'
+    // WebRTC
+    implementation 'io.github.webrtc-sdk:android:125.6422.04'
 
 }

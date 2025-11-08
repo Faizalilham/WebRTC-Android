@@ -18,10 +18,37 @@ class WebRtcClient(
     private var videoSource: VideoSource? = null
     private var surfaceViewRenderer: SurfaceViewRenderer? = null
 
-    private val iceServers = listOf(
-        PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
-        // Tambahkan TURN di sini jika perlu (untuk NAT ketat)
+    val iceServers = listOf(
+        // STUN
+        PeerConnection.IceServer.builder("stun:turn.fzcoturn.com:3478")
+            .createIceServer(),
+
+        // TURN UDP
+        PeerConnection.IceServer.builder("turn:turn.fzcoturn.com:3478")
+            .setUsername("fzubnt")
+            .setPassword("@Readyfz")
+            .createIceServer(),
+
+        // TURN TCP
+        PeerConnection.IceServer.builder("turn:turn.fzcoturn.com:3478?transport=tcp")
+            .setUsername("fzubnt")
+            .setPassword("@Readyfz")
+            .createIceServer(),
+
+        // TURN UDP 443 (untuk bypass firewall)
+        PeerConnection.IceServer.builder("turn:turn.fzcoturn.com:443")
+            .setUsername("fzubnt")
+            .setPassword("@Readyfz")
+            .createIceServer(),
+
+        // TURNS (TLS) - hanya jika sudah setup SSL
+        PeerConnection.IceServer.builder("turns:turn.fzcoturn.com:5349?transport=tcp")
+            .setUsername("fzubnt")
+            .setPassword("@Readyfz")
+            .createIceServer()
     )
+
+
 
     interface SignalingCallback {
         fun onLocalDescription(sdp: SessionDescription)

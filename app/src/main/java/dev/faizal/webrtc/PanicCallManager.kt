@@ -112,40 +112,39 @@ class PanicCallManager(
 
     private fun setupPeerConnection() {
         val iceServers = listOf(
-            // STUN
-            PeerConnection.IceServer.builder("stun:stun.relay.metered.ca:80").createIceServer(),
+            // STUN servers - lebih dari 1 untuk backup
+            PeerConnection.IceServer.builder("stun:xhvmubnt1.kodein.biz.id:3478")
+                .createIceServer(),
+            PeerConnection.IceServer.builder("stun:stun.l.google.com:19302")
+                .createIceServer(),
 
             // TURN UDP
-            PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:80")
-                .setUsername("77de4d97de5205cca5676bc7")
-                .setPassword("1m2Z/3G0MuqwLpNT")
+            PeerConnection.IceServer.builder("turn:xhvmubnt1.kodein.biz.id:3478")
+                .setUsername("kodein")
+                .setPassword("@Readykodein")
                 .createIceServer(),
 
-            // TURN TCP
-            PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:80?transport=tcp")
-                .setUsername("77de4d97de5205cca5676bc7")
-                .setPassword("1m2Z/3G0MuqwLpNT")
+            // TURN TCP - PENTING untuk firewall restrictive
+            PeerConnection.IceServer.builder("turn:xhvmubnt1.kodein.biz.id:3478?transport=tcp")
+                .setUsername("kodein")
+                .setPassword("@Readykodein")
                 .createIceServer(),
 
-            // TURN UDP 443
-            PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:443")
-                .setUsername("77de4d97de5205cca5676bc7")
-                .setPassword("1m2Z/3G0MuqwLpNT")
-                .createIceServer(),
-
-            // TURN TLS (turns)
-            PeerConnection.IceServer.builder("turns:standard.relay.metered.ca:443?transport=tcp")
-                .setUsername("77de4d97de5205cca5676bc7")
-                .setPassword("1m2Z/3G0MuqwLpNT")
+            // TURN UDP port 443 - untuk bypass firewall
+            PeerConnection.IceServer.builder("turn:xhvmubnt1.kodein.biz.id:443")
+                .setUsername("kodein")
+                .setPassword("@Readykodein")
                 .createIceServer()
         )
+
 
         val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
             bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
             rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
-            tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
+            tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.ENABLED
             continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
+            iceTransportsType = PeerConnection.IceTransportsType.ALL
         }
 
         peerConnection = peerConnectionFactory.createPeerConnection(
