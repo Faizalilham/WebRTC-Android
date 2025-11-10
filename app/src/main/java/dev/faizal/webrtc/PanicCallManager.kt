@@ -22,46 +22,78 @@ class PanicCallManager(
     private var currentCallId: String? = null
     private val TAG = "PanicCallManager"
 
+    // Ganti bagian initialize() di PanicCallManager.kt dengan kode ini:
+
     fun initialize() {
         val options = PeerConnectionFactory.InitializationOptions.builder(context)
             .setEnableInternalTracer(true)
             .createInitializationOptions()
         PeerConnectionFactory.initialize(options)
 
+        // ✅ AUDIO DEVICE MODULE - SETTING OPTIMAL ANTI-NOISE
         val audioDeviceModule = JavaAudioDeviceModule.builder(context)
-            .setUseHardwareAcousticEchoCanceler(true)
-            .setUseHardwareNoiseSuppressor(true)
-            .setSampleRate(44100)
+            // HARDWARE NOISE SUPPRESSION (Gunakan chip HP)
+            .setUseHardwareAcousticEchoCanceler(true) // ✅ Echo cancellation hardware
+            .setUseHardwareNoiseSuppressor(true)      // ✅ Noise suppressor hardware
+
+            // AUDIO QUALITY SETTINGS
+            .setUseStereoInput(false)   // Mono untuk voice call (lebih jernih)
+            .setUseStereoOutput(false)  // Mono output
+            .setSampleRate(48000)       // 48kHz = kualitas HD voice
+
+            // ✅ AUDIO RECORD SETTINGS (Mikrofon)
+            .setAudioRecordStateCallback(object : JavaAudioDeviceModule.AudioRecordStateCallback {
+                override fun onWebRtcAudioRecordStart() {
+                    Log.d(TAG, "🎤 Audio recording started")
+                }
+                override fun onWebRtcAudioRecordStop() {
+                    Log.d(TAG, "🎤 Audio recording stopped")
+                }
+            })
+
             .setAudioRecordErrorCallback(object : JavaAudioDeviceModule.AudioRecordErrorCallback {
                 override fun onWebRtcAudioRecordInitError(errorMessage: String?) {
-                    Log.e(TAG, "Audio Record Init Error: $errorMessage")
+                    Log.e(TAG, "❌ Audio Record Init Error: $errorMessage")
                 }
                 override fun onWebRtcAudioRecordStartError(
                     errorCode: JavaAudioDeviceModule.AudioRecordStartErrorCode?,
                     errorMessage: String?
                 ) {
-                    Log.e(TAG, "Audio Record Start Error: $errorMessage")
+                    Log.e(TAG, "❌ Audio Record Start Error: $errorMessage")
                 }
                 override fun onWebRtcAudioRecordError(errorMessage: String?) {
-                    Log.e(TAG, "Audio Record Error: $errorMessage")
+                    Log.e(TAG, "❌ Audio Record Error: $errorMessage")
                 }
             })
+
+            // ✅ AUDIO TRACK SETTINGS (Speaker)
+            .setAudioTrackStateCallback(object : JavaAudioDeviceModule.AudioTrackStateCallback {
+                override fun onWebRtcAudioTrackStart() {
+                    Log.d(TAG, "🔊 Audio playback started")
+                }
+                override fun onWebRtcAudioTrackStop() {
+                    Log.d(TAG, "🔊 Audio playback stopped")
+                }
+            })
+
             .setAudioTrackErrorCallback(object : JavaAudioDeviceModule.AudioTrackErrorCallback {
                 override fun onWebRtcAudioTrackInitError(errorMessage: String?) {
-                    Log.e(TAG, "Audio Track Init Error: $errorMessage")
+                    Log.e(TAG, "❌ Audio Track Init Error: $errorMessage")
                 }
                 override fun onWebRtcAudioTrackStartError(
                     errorCode: JavaAudioDeviceModule.AudioTrackStartErrorCode?,
                     errorMessage: String?
                 ) {
-                    Log.e(TAG, "Audio Track Start Error: $errorMessage")
+                    Log.e(TAG, "❌ Audio Track Start Error: $errorMessage")
                 }
                 override fun onWebRtcAudioTrackError(errorMessage: String?) {
-                    Log.e(TAG, "Audio Track Error: $errorMessage")
+                    Log.e(TAG, "❌ Audio Track Error: $errorMessage")
                 }
             })
+
             .createAudioDeviceModule()
 
+        // ✅ MUTE CONTROL - Pastikan tidak mute
         audioDeviceModule.setMicrophoneMute(false)
         audioDeviceModule.setSpeakerMute(false)
 
@@ -71,18 +103,44 @@ class PanicCallManager(
             .setAudioDeviceModule(audioDeviceModule)
             .createPeerConnectionFactory()
 
+        // ✅ AUDIO CONSTRAINTS - INI YANG PALING PENTING UNTUK NOISE REDUCTION
         val audioConstraints = MediaConstraints().apply {
+            // === ECHO CANCELLATION (Menghilangkan echo/gema) ===
             mandatory.add(MediaConstraints.KeyValuePair("googEchoCancellation", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("googEchoCancellation2", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("googDAEchoCancellation", "true"))
+
+            // === AUTO GAIN CONTROL (Stabilkan volume, jangan terlalu keras/pelan) ===
             mandatory.add(MediaConstraints.KeyValuePair("googAutoGainControl", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("googAutoGainControl2", "true"))
+
+            // === NOISE SUPPRESSION (Hilangkan noise background) ===
             mandatory.add(MediaConstraints.KeyValuePair("googNoiseSuppression", "true"))
-            mandatory.add(MediaConstraints.KeyValuePair("googHighpassFilter", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("googNoiseSuppression2", "true"))
+
+            // ✅ TAMBAHAN PENTING ANTI-NOISE
+            mandatory.add(MediaConstraints.KeyValuePair("googHighpassFilter", "true"))          // Filter suara bass/rendah
+            mandatory.add(MediaConstraints.KeyValuePair("googTypingNoiseDetection", "true"))    // Deteksi suara ketikan
+            mandatory.add(MediaConstraints.KeyValuePair("googAudioMirroring", "false"))         // Jangan mirror audio
+
+            // === EXPERIMENTAL FEATURES (Lebih agresif hilangkan noise) ===
+            mandatory.add(MediaConstraints.KeyValuePair("googExperimentalEchoCancellation", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("googExperimentalAutoGainControl", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("googExperimentalNoiseSuppression", "true"))
+
+            // ✅ AUDIO BANDWIDTH (Kualitas codec)
+            // Opus codec settings untuk voice clarity
+            mandatory.add(MediaConstraints.KeyValuePair("maxaveragebitrate", "40000"))  // 40kbps = kualitas tinggi
+            mandatory.add(MediaConstraints.KeyValuePair("stereo", "false"))             // Mono = lebih jernih
+            mandatory.add(MediaConstraints.KeyValuePair("useinbandfec", "true"))        // Forward Error Correction
+            mandatory.add(MediaConstraints.KeyValuePair("usedtx", "false"))             // Jangan pause saat diam (DTX off)
         }
 
         val audioSource = peerConnectionFactory.createAudioSource(audioConstraints)
         localAudioTrack = peerConnectionFactory.createAudioTrack("local_audio", audioSource)
         localAudioTrack.setEnabled(true)
 
-        Log.d(TAG, "WebRTC initialized successfully")
+        Log.d(TAG, "✅ WebRTC initialized with OPTIMIZED NOISE REDUCTION")
     }
 
     fun startPanicCall(recipients: List<String>) {
@@ -137,7 +195,6 @@ class PanicCallManager(
                 .createIceServer()
         )
 
-
         val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
             bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
             rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
@@ -145,6 +202,9 @@ class PanicCallManager(
             continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
             iceTransportsType = PeerConnection.IceTransportsType.ALL
+
+            // Audio codec preferences - Opus adalah yang terbaik untuk voice
+            // audioJitterBufferMaxPackets = 200 // Buffer lebih besar untuk koneksi tidak stabil
         }
 
         peerConnection = peerConnectionFactory.createPeerConnection(
@@ -181,7 +241,7 @@ class PanicCallManager(
 
                 override fun onIceCandidate(candidate: IceCandidate?) {
                     candidate?.let {
-                        Log.d(TAG, "New ICE candidate: ${it.sdpMid}")
+                        Log.d(TAG, "New ICE candidate: ${it.sdpMid} (${it.sdp})")
                         sendIceCandidate(it)
                     }
                 }
@@ -214,6 +274,7 @@ class PanicCallManager(
                         remoteAudioTrack = audioTrack
                         audioTrack.setEnabled(true)
                         audioTrack.setVolume(10.0)
+                        Log.d(TAG, "Remote audio track volume set to maximum")
                     }
                 }
             }
@@ -241,11 +302,19 @@ class PanicCallManager(
         val constraints = MediaConstraints().apply {
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
+            mandatory.add(MediaConstraints.KeyValuePair("VoiceActivityDetection", "true")) // VAD untuk hemat bandwidth
         }
 
         peerConnection?.createOffer(object : SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
                 Log.d(TAG, "Offer created successfully")
+
+                // Modifikasi SDP untuk optimize audio quality
+                val modifiedSdp = sdp.description
+                    .replace("useinbandfec=1", "useinbandfec=1;stereo=0;maxaveragebitrate=40000") // Opus optimization
+
+                val optimizedSdp = SessionDescription(sdp.type, modifiedSdp)
+
                 peerConnection?.setLocalDescription(object : SdpObserver {
                     override fun onCreateSuccess(p0: SessionDescription?) {}
                     override fun onSetSuccess() {
@@ -255,15 +324,15 @@ class PanicCallManager(
                     override fun onSetFailure(error: String?) {
                         Log.e(TAG, "Set local description failed: $error")
                     }
-                }, sdp)
+                }, optimizedSdp)
 
                 currentCallId?.let { callId ->
                     val offerMap = mapOf(
-                        "type" to sdp.type.canonicalForm(),
-                        "sdp" to sdp.description
+                        "type" to optimizedSdp.type.canonicalForm(),
+                        "sdp" to optimizedSdp.description
                     )
                     database.child("panic_calls/$callId/signaling/offer").setValue(offerMap)
-                    Log.d(TAG, "Offer sent to Firebase")
+                    Log.d(TAG, "Optimized offer sent to Firebase")
                 }
             }
 
@@ -279,11 +348,19 @@ class PanicCallManager(
         val constraints = MediaConstraints().apply {
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
+            mandatory.add(MediaConstraints.KeyValuePair("VoiceActivityDetection", "true"))
         }
 
         peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
                 Log.d(TAG, "Answer created successfully")
+
+                // Modifikasi SDP untuk optimize audio quality
+                val modifiedSdp = sdp.description
+                    .replace("useinbandfec=1", "useinbandfec=1;stereo=0;maxaveragebitrate=40000")
+
+                val optimizedSdp = SessionDescription(sdp.type, modifiedSdp)
+
                 peerConnection?.setLocalDescription(object : SdpObserver {
                     override fun onCreateSuccess(p0: SessionDescription?) {}
                     override fun onSetSuccess() {
@@ -293,15 +370,15 @@ class PanicCallManager(
                     override fun onSetFailure(error: String?) {
                         Log.e(TAG, "Set local answer failed: $error")
                     }
-                }, sdp)
+                }, optimizedSdp)
 
                 currentCallId?.let { callId ->
                     val answerMap = mapOf(
-                        "type" to sdp.type.canonicalForm(),
-                        "sdp" to sdp.description
+                        "type" to optimizedSdp.type.canonicalForm(),
+                        "sdp" to optimizedSdp.description
                     )
                     database.child("panic_calls/$callId/signaling/answer").setValue(answerMap)
-                    Log.d(TAG, "Answer sent to Firebase")
+                    Log.d(TAG, "Optimized answer sent to Firebase")
                 }
             }
 

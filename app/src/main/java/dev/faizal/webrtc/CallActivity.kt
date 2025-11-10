@@ -21,7 +21,7 @@ class CallActivity : AppCompatActivity() {
     private lateinit var binding : ActivityCallBinding
 
     private lateinit var database: DatabaseReference
-    private val currentUserId = "faizal" // Ganti sesuai device/user
+    private val currentUserId = "ibuk" // Ganti sesuai device/user
     private var currentCallId: String? = null
     private var isCallActive = false
 
@@ -91,62 +91,62 @@ class CallActivity : AppCompatActivity() {
         binding.tvCallStatus.text = "Connected to $currentCallerId"
         binding.btnAnswer.isEnabled = false
 
-        startWebRtcCall(currentCallId!!, currentCallerId!!) // ✅ Gunakan currentCallerId
+//        startWebRtcCall(currentCallId!!, currentCallerId!!) // ✅ Gunakan currentCallerId
         Toast.makeText(this, "Call answered!", Toast.LENGTH_SHORT).show()
     }
-    private fun startWebRtcCall(callId: String, callerId: String) {
-        firebaseSignaling = FirebaseSignaling(callId)
-        webRtcClient = WebRtcClient(
-            this,
-            currentUserId,
-            callerId,
-            object : WebRtcClient.SignalingCallback {
-                override fun onLocalDescription(sdp: SessionDescription) {
-                    firebaseSignaling?.sendSignal(currentUserId, sdp.type.canonicalForm(), sdp.description)
-                }
-
-                override fun onIceCandidate(candidate: IceCandidate) {
-                    val candidateStr = "${candidate.sdpMid},${candidate.sdpMLineIndex},${candidate.sdp}"
-                    firebaseSignaling?.sendSignal(currentUserId, "candidate", candidateStr)
-                }
-
-                override fun onCallEstablished() {
-                    runOnUiThread {
-                        binding.tvCallStatus.text = "📞 Call Connected!"
-                        Toast.makeText(this@CallActivity, "Call connected!", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            },
-            firebaseSignaling!!
-        )
-
-        // Mulai WebRTC
-        webRtcClient?.start()
-
-        // Dengarkan signaling
-        firebaseSignaling?.listenForSignals { from, type, data ->
-            if (from == callerId) {
-                when (type) {
-                    "offer" -> {
-                        webRtcClient?.setRemoteDescription(data, "offer")
-                        webRtcClient?.createAnswer()
-                    }
-                    "answer" -> {
-                        webRtcClient?.setRemoteDescription(data, "answer")
-                    }
-                    "candidate" -> {
-                        val parts = data.split(",")
-                        if (parts.size == 3) {
-                            val ice = IceCandidate(parts[0], parts[1].toInt(), parts[2])
-                            webRtcClient?.addIceCandidate(ice)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Kirim offer (jika Anda inisiator — tapi di sini receiver, jadi tunggu offer)
-    }
+//    private fun startWebRtcCall(callId: String, callerId: String) {
+//        firebaseSignaling = FirebaseSignaling(callId)
+//        webRtcClient = WebRtcClient(
+//            this,
+//            currentUserId,
+//            callerId,
+//            object : WebRtcClient.SignalingCallback {
+//                override fun onLocalDescription(sdp: SessionDescription) {
+//                    firebaseSignaling?.sendSignal(currentUserId, sdp.type.canonicalForm(), sdp.description)
+//                }
+//
+//                override fun onIceCandidate(candidate: IceCandidate) {
+//                    val candidateStr = "${candidate.sdpMid},${candidate.sdpMLineIndex},${candidate.sdp}"
+//                    firebaseSignaling?.sendSignal(currentUserId, "candidate", candidateStr)
+//                }
+//
+//                override fun onCallEstablished() {
+//                    runOnUiThread {
+//                        binding.tvCallStatus.text = "📞 Call Connected!"
+//                        Toast.makeText(this@CallActivity, "Call connected!", Toast.LENGTH_SHORT).show()
+//                    }
+//                }
+//            },
+//            firebaseSignaling!!
+//        )
+//
+//        // Mulai WebRTC
+//        webRtcClient?.start()
+//
+//        // Dengarkan signaling
+//        firebaseSignaling?.listenForSignals { from, type, data ->
+//            if (from == callerId) {
+//                when (type) {
+//                    "offer" -> {
+//                        webRtcClient?.setRemoteDescription(data, "offer")
+//                        webRtcClient?.createAnswer()
+//                    }
+//                    "answer" -> {
+//                        webRtcClient?.setRemoteDescription(data, "answer")
+//                    }
+//                    "candidate" -> {
+//                        val parts = data.split(",")
+//                        if (parts.size == 3) {
+//                            val ice = IceCandidate(parts[0], parts[1].toInt(), parts[2])
+//                            webRtcClient?.addIceCandidate(ice)
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//        // Kirim offer (jika Anda inisiator — tapi di sini receiver, jadi tunggu offer)
+//    }
 
     override fun onDestroy() {
         super.onDestroy()

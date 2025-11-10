@@ -7,16 +7,11 @@ import org.webrtc.audio.JavaAudioDeviceModule
 
 class WebRtcClient(
     private val context: Context,
-    private val localId: String,
-    private val remoteId: String,
     private val signalingCallback: SignalingCallback,
-    private val firebaseSignaling: FirebaseSignaling
 ) {
 
     private var peerConnectionFactory: PeerConnectionFactory? = null
     private var localPeer: PeerConnection? = null
-    private var videoSource: VideoSource? = null
-    private var surfaceViewRenderer: SurfaceViewRenderer? = null
 
     val iceServers = listOf(
         // STUN
@@ -139,25 +134,6 @@ class WebRtcClient(
         localPeer?.addIceCandidate(candidate)
     }
 
-    fun createOffer() {
-        localPeer?.createOffer(object : SdpObserver {
-            override fun onCreateSuccess(sdp: SessionDescription?) {
-                sdp?.let {
-                    localPeer?.setLocalDescription(object : SdpObserver {
-                        override fun onCreateSuccess(p0: SessionDescription?) {}
-                        override fun onSetSuccess() { Log.d("WebRTC", "Local SDP set") }
-                        override fun onCreateFailure(p0: String?) {}
-                        override fun onSetFailure(p0: String?) {}
-                    }, it)
-                    signalingCallback.onLocalDescription(it)
-                }
-            }
-            override fun onSetSuccess() {}
-            override fun onCreateFailure(p0: String?) { Log.e("WebRTC", "Create offer failed: $p0") }
-            override fun onSetFailure(p0: String?) {}
-        }, MediaConstraints())
-    }
-
     fun createAnswer() {
         localPeer?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription?) {
@@ -175,10 +151,5 @@ class WebRtcClient(
             override fun onCreateFailure(p0: String?) { Log.e("WebRTC", "Create answer failed: $p0") }
             override fun onSetFailure(p0: String?) {}
         }, MediaConstraints())
-    }
-
-    fun close() {
-        localPeer?.close()
-        peerConnectionFactory?.dispose()
     }
 }
